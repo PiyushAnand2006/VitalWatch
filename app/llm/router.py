@@ -9,7 +9,12 @@ from app.llm.base import LLMProvider
 from app.llm.config import SlotConfig
 from app.llm.errors import LLMProviderError
 from app.privacy.dispatch import ApprovedDispatcher
-from app.schemas.privacy import DispatchOutcome, ExternalDestination, PreparedPayload
+from app.schemas.privacy import (
+    DispatchOutcome,
+    DispatchPurpose,
+    ExternalDestination,
+    PreparedPayload,
+)
 from app.schemas.providers import (
     LLMErrorCode,
     LLMRequest,
@@ -49,8 +54,13 @@ class ProviderRouter:
         request: LLMRequest,
         approval_id: UUID,
         fallback_approval_id: UUID | None = None,
+        purpose: DispatchPurpose | None = None,
     ) -> RoutingResult:
-        """Call one slot, optionally using a separately approved fallback route."""
+        """Call one slot, optionally using a separately approved fallback route.
+
+        ``purpose`` overrides the slot's default destination purpose for debate
+        calls (critique, revision, repair); each purpose is a distinct approval.
+        """
 
         unavailable = self._unavailable_result(slot)
         if unavailable is not None:
@@ -58,7 +68,7 @@ class ProviderRouter:
 
         config = self._slots[slot]
         provider = self._providers[slot]
-        destination = config.destination()
+        destination = config.destination(purpose)
         primary = await self._dispatch(
             approval_id=approval_id,
             request=request,

@@ -39,15 +39,6 @@ _MODEL_CACHE: dict[
 _MODEL_CACHE_LOCK = threading.Lock()
 
 
-def _model_dimension(model: "SentenceTransformer") -> int:
-    """Support both the current and previous sentence-transformers accessor names."""
-
-    getter = getattr(model, "get_embedding_dimension", None)
-    if callable(getter):
-        return int(getter())
-    return int(model.get_sentence_embedding_dimension())
-
-
 def clear_embedding_model_cache() -> None:
     """Release cached weights; used by tests and explicit operator reloads."""
 
@@ -122,7 +113,7 @@ class LocalEmbeddingService:
             cached = _MODEL_CACHE.get(key)
             if cached is None:
                 model = self._construct_model()
-                if _model_dimension(model) != EMBEDDING_DIMENSION:
+                if model.get_sentence_embedding_dimension() != EMBEDDING_DIMENSION:
                     raise AppError(
                         409,
                         "embedding_model_incompatible",

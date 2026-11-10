@@ -184,6 +184,17 @@ def select_observations(
     ]
 
 
+def _scoped_labs(
+    observations: Sequence[ParsedObservation], policy: QuestionPolicy
+) -> set[str]:
+    """Labs that stay in scope: the selected observations, intersected with the request."""
+
+    allowed = {observation.canonical_name for observation in observations}
+    if policy.requested_labs:
+        allowed &= set(policy.requested_labs)
+    return allowed
+
+
 def select_findings(
     evidence: EvidencePackage,
     *,
@@ -192,9 +203,7 @@ def select_findings(
 ) -> list[LabFinding]:
     """Filter grouped findings to the selected lab scope."""
 
-    allowed = {observation.canonical_name for observation in observations}
-    if policy.requested_labs:
-        allowed &= set(policy.requested_labs)
+    allowed = _scoped_labs(observations, policy)
     return [finding for finding in evidence.findings if finding.canonical_name in allowed]
 
 
@@ -206,9 +215,7 @@ def select_conflicts(
 ) -> list[LabConflict]:
     """Filter conflicts to labs that remain in scope."""
 
-    allowed = {observation.canonical_name for observation in observations}
-    if policy.requested_labs:
-        allowed &= set(policy.requested_labs)
+    allowed = _scoped_labs(observations, policy)
     return [conflict for conflict in evidence.conflicts if conflict.canonical_name in allowed]
 
 

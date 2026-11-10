@@ -1,8 +1,5 @@
 """Database engine, session management, and base models for SQLAlchemy 2.x and PostgreSQL."""
 
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
-
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -51,16 +48,6 @@ class DatabaseSessionManager:
 
     async def close(self) -> None:
         await self._engine.dispose()
-
-    @asynccontextmanager
-    async def session(self) -> AsyncIterator[AsyncSession]:
-        async with self._sessionmaker() as session:
-            try:
-                yield session
-                await session.commit()
-            except Exception:
-                await session.rollback()
-                raise
 
 
 def get_database_manager(settings: Settings) -> DatabaseSessionManager:

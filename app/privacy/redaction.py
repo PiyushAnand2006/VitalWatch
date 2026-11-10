@@ -136,7 +136,7 @@ def redact_text(
 
     age_entities = [entity for entity in remaining if entity.entity_type == "AGE"]
     for entity in age_entities:
-        band = age_band_from_lexeme(text[entity.start : entity.end], on_date)
+        band = age_band_from_lexeme(text[entity.start : entity.end])
         if band is None:
             replacement = "[AGE_REDACTED]"
         else:

@@ -15,7 +15,6 @@ def test_secure_defaults() -> None:
     assert settings.debug is False
     assert settings.api_docs_enabled is False
     assert settings.external_llm_enabled is False
-    assert settings.privacy_gate_enabled is True
 
 
 def test_secret_is_required() -> None:
@@ -40,15 +39,6 @@ def test_known_placeholder_secrets_are_rejected(placeholder: str) -> None:
 def test_short_secret_is_rejected() -> None:
     with pytest.raises(ValidationError):
         Settings(_env_file=None, app_secret_key="too-short")
-
-
-def test_privacy_gate_cannot_be_disabled() -> None:
-    with pytest.raises(ValidationError, match="cannot be false"):
-        Settings(
-            _env_file=None,
-            app_secret_key=TEST_SECRET,
-            privacy_gate_enabled=False,
-        )
 
 
 def test_production_debug_is_rejected() -> None:

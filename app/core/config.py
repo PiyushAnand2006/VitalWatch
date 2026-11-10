@@ -4,12 +4,13 @@ from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
-from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.endpoints import validate_remote_endpoint
 from app.schemas.embeddings import DEFAULT_EMBEDDING_MODEL_NAME
+from app.schemas.orchestration import UrgentRule
 from app.schemas.providers import ProviderKind
 
 
@@ -27,29 +28,6 @@ _FORBIDDEN_SECRETS = {
     "changeme",
     "replace_with_secure_random_secret_at_least_32_chars",
 }
-
-_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
-
-
-def _validate_https_or_loopback(value: str | None) -> str | None:
-    """Require TLS for remote hosts while permitting local loopback development."""
-
-    if value is None:
-        return None
-    parsed = urlsplit(value)
-    if not parsed.hostname:
-        raise ValueError("endpoint must be an absolute URL with a host")
-    if parsed.scheme == "https":
-        pass
-    elif parsed.scheme == "http" and parsed.hostname in _LOOPBACK_HOSTS:
-        pass
-    else:
-        raise ValueError("remote endpoints must use https; http is loopback-only")
-    if parsed.username is not None or parsed.password is not None:
-        raise ValueError("endpoint must not contain credentials")
-    if parsed.fragment or parsed.query:
-        raise ValueError("endpoint must not contain a query or fragment")
-    return value
 
 
 class Settings(BaseSettings):
@@ -91,7 +69,6 @@ class Settings(BaseSettings):
     retrieval_min_score: float = Field(default=0.25, ge=0.0, le=1.0)
     retrieval_max_query_chars: int = Field(default=2000, ge=1, le=8000)
 
-    privacy_gate_enabled: bool = True
     privacy_local_only: bool = True
     privacy_approval_ttl_seconds: int = Field(default=300, ge=30, le=3600)
     privacy_max_question_chars: int = Field(default=2000, ge=1, le=8000)
@@ -132,6 +109,12 @@ class Settings(BaseSettings):
     llm_rate_limit_per_minute: int = Field(default=30, ge=1, le=600)
     llm_max_output_tokens: int = Field(default=2048, ge=1, le=8192)
     llm_temperature: float = Field(default=0.2, ge=0.0, le=2.0)
+
+    orchestration_max_debate_rounds: int = Field(default=1, ge=1, le=2)
+    orchestration_max_provider_calls: int = Field(default=12, ge=3, le=40)
+    orchestration_max_total_tokens: int = Field(default=40000, ge=1000, le=200000)
+    orchestration_timeout_seconds: float = Field(default=120.0, ge=10.0, le=600.0)
+    safety_urgent_rules: list[UrgentRule] = Field(default_factory=list)
 
     @field_validator("app_secret_key")
     @classmethod
@@ -184,7 +167,7 @@ class Settings(BaseSettings):
     def require_tls_for_remote_endpoints(cls, value: str | None) -> str | None:
         """Reject credentials, fragments, and plaintext non-loopback destinations."""
 
-        return _validate_https_or_loopback(value)
+        return validate_remote_endpoint(value)
 
     @field_validator("llama_chat_route")
     @classmethod
@@ -221,8 +204,6 @@ class Settings(BaseSettings):
     def enforce_security_boundaries(self) -> "Settings":
         """Enforce controls that are not allowed to be disabled."""
 
-        if not self.privacy_gate_enabled:
-            raise ValueError("PRIVACY_GATE_ENABLED cannot be false")
         if not self.privacy_local_only and not self.external_llm_enabled:
             raise ValueError(
                 "PRIVACY_LOCAL_ONLY cannot be false while EXTERNAL_LLM_ENABLED is false"

@@ -5,8 +5,9 @@ from enum import StrEnum
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.schemas.common import AwareDatetime
 from app.schemas.embeddings import EmbeddingModelInfo
 
 
@@ -25,17 +26,10 @@ class RetrievalFilter(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    as_of: datetime | None = None
+    as_of: AwareDatetime | None = None
     document_ids: tuple[UUID, ...] | None = None
-    created_from: datetime | None = None
-    created_to: datetime | None = None
-
-    @field_validator("as_of", "created_from", "created_to")
-    @classmethod
-    def require_timezone(cls, value: datetime | None) -> datetime | None:
-        if value is not None and value.tzinfo is None:
-            raise ValueError("retrieval timestamps must be timezone-aware")
-        return value
+    created_from: AwareDatetime | None = None
+    created_to: AwareDatetime | None = None
 
     @model_validator(mode="after")
     def reject_inverted_window(self) -> "RetrievalFilter":

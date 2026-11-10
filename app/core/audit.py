@@ -1,7 +1,7 @@
 """Audit service interface and non-sensitive logging sink."""
 
 import logging
-from typing import Protocol, runtime_checkable
+from typing import Protocol
 
 from app.core.request_context import get_request_id
 from app.schemas.audit import AuditEvent
@@ -9,7 +9,6 @@ from app.schemas.audit import AuditEvent
 logger = logging.getLogger(__name__)
 
 
-@runtime_checkable
 class AuditSink(Protocol):
     """Destination for structured audit events."""
 

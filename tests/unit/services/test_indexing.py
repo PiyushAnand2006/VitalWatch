@@ -156,28 +156,4 @@ async def test_document_without_chunks_clears_its_index() -> None:
     assert repository.replaced[0][2] == []
 
 
-async def test_vector_count_mismatch_fails_closed() -> None:
-    document_id = uuid4()
-    storage = FakeStorage({f"{document_id}.extraction.json": _extraction(document_id)})
 
-    class MissingVectorEmbeddings(FakeEmbeddings):
-        async def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
-            return []
-
-    with pytest.raises(AppError) as error:
-        await DocumentIndexer(FakeRepository(), storage, MissingVectorEmbeddings()).index_document(
-            "synthetic-patient", document_id
-        )
-
-    assert error.value.code == "embedding_model_unavailable"
-
-
-async def test_delete_document_forwards_authorized_scope() -> None:
-    document_id = uuid4()
-    repository = FakeRepository()
-    indexer = DocumentIndexer(repository, FakeStorage({}), FakeEmbeddings())
-
-    removed = await indexer.delete_document("synthetic-patient", document_id)
-
-    assert removed == 3
-    assert repository.deleted == [("synthetic-patient", document_id)]

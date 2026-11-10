@@ -14,6 +14,7 @@ from app.core.logging import configure_logging
 from app.core.request_context import RequestIDMiddleware
 from app.llm.config import build_provider_registry, resolve_slots
 from app.llm.router import ProviderRouter
+from app.orchestration.service import build_orchestration_service
 from app.privacy.dispatch import ApprovedDispatcher
 from app.privacy.engine import PresidioPiiAnalyzer
 from app.privacy.gate import PrivacyGate
@@ -87,11 +88,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.evidence_compiler = EvidenceCompiler()
     app.state.privacy_approvals = PrivacyApprovalRepository(database.sessionmaker)
+    analyzer = PresidioPiiAnalyzer(
+        model_name=resolved_settings.privacy_nlp_model,
+        score_threshold=resolved_settings.privacy_analyzer_score_threshold,
+    )
     app.state.privacy_gate = PrivacyGate(
-        analyzer=PresidioPiiAnalyzer(
-            model_name=resolved_settings.privacy_nlp_model,
-            score_threshold=resolved_settings.privacy_analyzer_score_threshold,
-        ),
+        analyzer=analyzer,
         approvals=app.state.privacy_approvals,
         local_only=resolved_settings.privacy_local_only,
         max_question_chars=resolved_settings.privacy_max_question_chars,
@@ -112,6 +114,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         external_enabled=resolved_settings.external_llm_enabled,
         local_only=resolved_settings.privacy_local_only,
         fallback_enabled=resolved_settings.llm_fallback_enabled,
+    )
+    app.state.orchestration = build_orchestration_service(
+        settings=resolved_settings,
+        gate=app.state.privacy_gate,
+        router=app.state.provider_router,
+        provider_slots=app.state.provider_slots,
+        analyzer=analyzer,
     )
     app.state.document_processor = DocumentProcessor(
         app.state.document_repository,

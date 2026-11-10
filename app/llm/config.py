@@ -32,14 +32,18 @@ class SlotConfig:
     endpoint: str
     purpose: DispatchPurpose
 
-    def destination(self) -> ExternalDestination:
-        """Build the approval-bound destination for this slot."""
+    def destination(self, purpose: DispatchPurpose | None = None) -> ExternalDestination:
+        """Build the approval-bound destination for this slot.
+
+        Debate nodes call one slot for several purposes (reasoning, critique,
+        revision); each purpose is a distinct approval destination.
+        """
 
         return ExternalDestination(
             provider=self.provider.value,
             endpoint=self.endpoint,
             model=self.model,
-            purpose=self.purpose,
+            purpose=purpose or self.purpose,
         )
 
 
@@ -48,7 +52,6 @@ class ProviderRegistry:
     """Per-slot adapters sharing a per-provider rate limiter."""
 
     providers: dict[ModelSlot, LLMProvider]
-    limiters: dict[ProviderKind, AsyncRateLimiter]
 
     async def aclose(self) -> None:
         """Release every adapter-owned HTTP client."""
@@ -57,33 +60,27 @@ class ProviderRegistry:
             await provider.aclose()
 
 
-_SLOT_FIELDS: tuple[ModelSlot, ...] = (
-    ModelSlot.REASONER_A,
-    ModelSlot.REASONER_B,
-    ModelSlot.REASONER_C,
-    ModelSlot.FINAL_ADJUDICATOR,
-    ModelSlot.FALLBACK,
-)
+@dataclass(frozen=True)
+class _SlotSpec:
+    """One slot's settings prefix and its default approval purpose."""
 
-_PURPOSES: dict[ModelSlot, DispatchPurpose] = {
-    ModelSlot.REASONER_A: DispatchPurpose.REASONING,
-    ModelSlot.REASONER_B: DispatchPurpose.REASONING,
-    ModelSlot.REASONER_C: DispatchPurpose.REASONING,
-    ModelSlot.FINAL_ADJUDICATOR: DispatchPurpose.ADJUDICATION,
-    ModelSlot.FALLBACK: DispatchPurpose.FALLBACK,
+    prefix: str
+    purpose: DispatchPurpose
+
+
+_SLOT_SPECS: dict[ModelSlot, _SlotSpec] = {
+    ModelSlot.REASONER_A: _SlotSpec("reasoner_a", DispatchPurpose.REASONING),
+    ModelSlot.REASONER_B: _SlotSpec("reasoner_b", DispatchPurpose.REASONING),
+    ModelSlot.REASONER_C: _SlotSpec("reasoner_c", DispatchPurpose.REASONING),
+    ModelSlot.FINAL_ADJUDICATOR: _SlotSpec("adjudicator", DispatchPurpose.ADJUDICATION),
+    ModelSlot.FALLBACK: _SlotSpec("fallback", DispatchPurpose.FALLBACK),
 }
 
 
 def _slot_values(
     settings: Settings, slot: ModelSlot
 ) -> tuple[ProviderKind | None, str | None, str | None]:
-    prefix = {
-        ModelSlot.REASONER_A: "reasoner_a",
-        ModelSlot.REASONER_B: "reasoner_b",
-        ModelSlot.REASONER_C: "reasoner_c",
-        ModelSlot.FINAL_ADJUDICATOR: "adjudicator",
-        ModelSlot.FALLBACK: "fallback",
-    }[slot]
+    prefix = _SLOT_SPECS[slot].prefix
     return (
         getattr(settings, f"llm_{prefix}_provider"),
         getattr(settings, f"llm_{prefix}_model"),
@@ -116,7 +113,7 @@ def resolve_slots(settings: Settings) -> dict[ModelSlot, SlotConfig]:
     """Return only fully configured slots; all others remain unavailable."""
 
     slots: dict[ModelSlot, SlotConfig] = {}
-    for slot in _SLOT_FIELDS:
+    for slot, spec in _SLOT_SPECS.items():
         provider, model, endpoint = _slot_values(settings, slot)
         if provider is None or model is None:
             continue
@@ -125,7 +122,7 @@ def resolve_slots(settings: Settings) -> dict[ModelSlot, SlotConfig]:
             provider=provider,
             model=model,
             endpoint=_provider_endpoint(settings, provider, model, endpoint),
-            purpose=_PURPOSES[slot],
+            purpose=spec.purpose,
         )
     return slots
 
@@ -179,7 +176,7 @@ def build_provider_registry(
                 auth_scheme=settings.llama_auth_scheme,
                 **common,
             )
-    return ProviderRegistry(providers=providers, limiters=limiters)
+    return ProviderRegistry(providers=providers)
 
 
 def describe_providers(
@@ -215,7 +212,7 @@ def describe_providers(
             model=slots[slot].model if slot in slots else None,
             endpoint=slots[slot].endpoint if slot in slots else None,
         )
-        for slot in _SLOT_FIELDS
+        for slot in _SLOT_SPECS
     ]
     return ProvidersResponse(
         external_llm_enabled=settings.external_llm_enabled,

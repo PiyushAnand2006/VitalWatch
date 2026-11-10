@@ -79,7 +79,7 @@ def age_band(birth_date: date, on_date: date) -> str | None:
     return f"{lower}_{lower + 9}"
 
 
-def age_band_from_lexeme(value: str, on_date: date) -> str | None:
+def age_band_from_lexeme(value: str) -> str | None:
     """Generalize an explicit age to the same bands used for date of birth."""
 
     match = re.search(r"\d{1,3}", value)

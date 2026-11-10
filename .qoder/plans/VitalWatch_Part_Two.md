@@ -172,15 +172,15 @@ After each stage, run its focused tests and then the complete current suite with
 - **Tests:** mocked request/response normalization, malformed responses, timeout/retry bounds, authentication failures, routing, disabled slots, destination approval, payload digest enforcement, fallback re-approval, and metadata/log redaction. ✅
 - **Gate:** all tests run without API keys. Live behavior is not claimed unless a separately approved synthetic-data smoke test succeeds. ✅ (60 focused Stage 7 tests pass; no live provider call was made.)
 
-### Stage 8 — LangGraph orchestration and deterministic verification
-- [ ] Implement typed graph state and the required nodes: context loading, safety precheck, independent reasoning, normalization, deterministic validation, critique, bounded revision, safety review, candidate gate, final adjudication, final validation, and repair/abstain.
-- [ ] Add explicit conditional edges for privacy blocked, urgent safety, insufficient evidence, debate bounds, unresolved disagreement, adjudication, one repair, and abstention.
-- [ ] Implement independent async A/B/C first-pass calls with identical evidence and no peer visibility; cap rounds, total calls, tokens, and timeouts.
-- [ ] Implement standalone schema, evidence, numerical/unit, temporal, consistency, safety, and provenance verifiers.
-- [ ] Preserve supported minority objections and send only validated claims/disagreements to the separate adjudicator; never use majority vote as truth.
-- [ ] Return structured verified facts/hypotheses/conflicts/missing information/uncertainty/review notices, never hidden chain-of-thought.
-- **Tests:** each verifier independently; initial independence; urgent bypass; unknown/unsupported IDs; wrong decimal/value/date/unit; source conflicts; prompt injection; unsafe diagnosis/treatment text; unresolved disagreement; adjudicator input restrictions; malformed JSON repaired once; second failure abstains; and provider-call/round limits.
-- **Gate:** execute the compiled LangGraph against mocked providers for both success and every failure route, and verify final answers cannot be marked verified before all checks pass.
+### Stage 8 — LangGraph orchestration and deterministic verification ✅
+- [x] Implement typed graph state and the required nodes: context loading, safety precheck, independent reasoning, normalization, deterministic validation, critique, bounded revision, safety review, candidate gate, final adjudication, final validation, and repair/abstain.
+- [x] Add explicit conditional edges for privacy blocked, urgent safety, insufficient evidence, debate bounds, unresolved disagreement, adjudication, one repair, and abstention.
+- [x] Implement independent async A/B/C first-pass calls with identical evidence and no peer visibility; cap rounds, total calls, tokens, and timeouts.
+- [x] Implement standalone schema, evidence, numerical/unit, temporal, consistency, safety, and provenance verifiers.
+- [x] Preserve supported minority objections and send only validated claims/disagreements to the separate adjudicator; never use majority vote as truth.
+- [x] Return structured verified facts/hypotheses/conflicts/missing information/uncertainty/review notices, never hidden chain-of-thought.
+- **Tests:** each verifier independently; initial independence; urgent bypass; unknown/unsupported IDs; wrong decimal/value/date/unit; source conflicts; prompt injection; unsafe diagnosis/treatment text; unresolved disagreement; adjudicator input restrictions; malformed JSON repaired once; second failure abstains; and provider-call/round limits. ✅
+- **Gate:** execute the compiled LangGraph against mocked providers for both success and every failure route, and verify final answers cannot be marked verified before all checks pass. ✅ (55 focused Stage 8 tests pass against the compiled graph with mocked providers and the real privacy gate/dispatch guard; no live provider call was made.)
 
 ### Stage 9 — Complete Part 2 API and vertical slice
 - [ ] Add authorized `/retrieve` and `/query` endpoints plus response statuses, citations, verification summaries, model metadata, and clinician-review flags.

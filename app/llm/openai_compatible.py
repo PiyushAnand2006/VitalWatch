@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.llm.base import BaseHTTPProvider
+from app.llm.base import BaseHTTPProvider, nonnegative_int
 from app.llm.errors import LLMProviderError
 from app.schemas.providers import (
     LLMErrorCode,
@@ -60,9 +60,9 @@ class OpenAICompatibleProvider(BaseHTTPProvider):
         normalized_usage = LLMUsage()
         if isinstance(usage, dict):
             normalized_usage = LLMUsage(
-                prompt_tokens=_nonnegative_int(usage.get("prompt_tokens")),
-                completion_tokens=_nonnegative_int(usage.get("completion_tokens")),
-                total_tokens=_nonnegative_int(usage.get("total_tokens")),
+                prompt_tokens=nonnegative_int(usage.get("prompt_tokens")),
+                completion_tokens=nonnegative_int(usage.get("completion_tokens")),
+                total_tokens=nonnegative_int(usage.get("total_tokens")),
             )
         finish_reason = choice.get("finish_reason")
         response_id = data.get("id")
@@ -112,9 +112,3 @@ class LlamaCompatibleProvider(OpenAICompatibleProvider):
             )
             headers[self._auth_header] = value
         return headers
-
-
-def _nonnegative_int(value: object) -> int:
-    if isinstance(value, bool) or not isinstance(value, int):
-        return 0
-    return max(0, value)

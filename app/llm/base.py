@@ -137,21 +137,16 @@ class BaseHTTPProvider(ABC):
             status,
         )
         if status in {401, 403}:
-            raise LLMProviderError(
-                LLMErrorCode.AUTHENTICATION_FAILED, status_code=status
-            )
+            raise LLMProviderError(LLMErrorCode.AUTHENTICATION_FAILED)
         if status == 429:
             raise LLMProviderError(
                 LLMErrorCode.RATE_LIMITED,
                 retryable=True,
-                status_code=status,
                 retry_after_seconds=_retry_after(response),
             )
         if status in RETRYABLE_STATUSES:
-            raise LLMProviderError(
-                LLMErrorCode.UNAVAILABLE, retryable=True, status_code=status
-            )
-        raise LLMProviderError(LLMErrorCode.BAD_REQUEST, status_code=status)
+            raise LLMProviderError(LLMErrorCode.UNAVAILABLE, retryable=True)
+        raise LLMProviderError(LLMErrorCode.BAD_REQUEST)
 
     def _parse(
         self, response: httpx.Response, request: LLMRequest, latency_ms: int
@@ -199,3 +194,11 @@ def _retry_after(response: httpx.Response) -> float | None:
         return float(str(value))
     except ValueError:
         return None
+
+
+def nonnegative_int(value: object) -> int:
+    """Coerce a host-reported token count to a safe non-negative integer."""
+
+    if isinstance(value, bool) or not isinstance(value, int):
+        return 0
+    return max(0, value)

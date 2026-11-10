@@ -78,7 +78,9 @@ class PrivacyGate:
         patient_ref = stable_ref(evidence.patient_id) if evidence.patient_id else None
         actor_hash = stable_ref(actor_ref) if actor_ref else None
 
-        if self._local_only:
+        async def reject(reason_codes: Sequence[str]) -> PrivacyDecision:
+            """Record one fail-closed rejection without exposing a payload."""
+
             return await self._reject(
                 approval_id=approval_id,
                 request_id=request_id,
@@ -86,42 +88,21 @@ class PrivacyGate:
                 now=now,
                 patient_ref=patient_ref,
                 actor_ref=actor_hash,
-                reason_codes=["local_only_mode"],
+                reason_codes=reason_codes,
             )
+
+        if self._local_only:
+            return await reject(["local_only_mode"])
 
         cleaned = question.strip()
         if not cleaned:
-            return await self._reject(
-                approval_id=approval_id,
-                request_id=request_id,
-                destination=destination,
-                now=now,
-                patient_ref=patient_ref,
-                actor_ref=actor_hash,
-                reason_codes=["empty_question"],
-            )
+            return await reject(["empty_question"])
         if len(cleaned) > self._max_question_chars:
-            return await self._reject(
-                approval_id=approval_id,
-                request_id=request_id,
-                destination=destination,
-                now=now,
-                patient_ref=patient_ref,
-                actor_ref=actor_hash,
-                reason_codes=["question_too_long"],
-            )
+            return await reject(["question_too_long"])
 
         provenance_reasons = _provenance_reasons(evidence)
         if provenance_reasons:
-            return await self._reject(
-                approval_id=approval_id,
-                request_id=request_id,
-                destination=destination,
-                now=now,
-                patient_ref=patient_ref,
-                actor_ref=actor_hash,
-                reason_codes=provenance_reasons,
-            )
+            return await reject(provenance_reasons)
 
         try:
             policy = classify_question(cleaned)
@@ -149,39 +130,15 @@ class PrivacyGate:
             )
         except PiiAnalyzerUnavailable:
             logger.error("privacy analyzer unavailable request_id=%s", request_id)
-            return await self._reject(
-                approval_id=approval_id,
-                request_id=request_id,
-                destination=destination,
-                now=now,
-                patient_ref=patient_ref,
-                actor_ref=actor_hash,
-                reason_codes=["presidio_unavailable"],
-            )
+            return await reject(["presidio_unavailable"])
         except PiiAnalysisError:
             logger.error("privacy analysis failed request_id=%s", request_id)
-            return await self._reject(
-                approval_id=approval_id,
-                request_id=request_id,
-                destination=destination,
-                now=now,
-                patient_ref=patient_ref,
-                actor_ref=actor_hash,
-                reason_codes=["presidio_analysis_failed"],
-            )
+            return await reject(["presidio_analysis_failed"])
         except Exception as exc:  # fail closed on every unexpected service path
             logger.error(
                 "privacy gate failure request_id=%s type=%s", request_id, type(exc).__name__
             )
-            return await self._reject(
-                approval_id=approval_id,
-                request_id=request_id,
-                destination=destination,
-                now=now,
-                patient_ref=patient_ref,
-                actor_ref=actor_hash,
-                reason_codes=["gate_failure"],
-            )
+            return await reject(["gate_failure"])
 
         if review_flags:
             return await self._finish(

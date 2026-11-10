@@ -146,6 +146,27 @@ async def test_blank_text_is_rejected(fake_model: type[FakeSentenceTransformer])
         await _service().embed_documents(["   "])
 
 
+async def test_vector_count_mismatch_fails_closed(
+    fake_model: type[FakeSentenceTransformer], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The embedding service is the single fail-closed guard for count alignment."""
+
+    original_encode = fake_model.encode
+
+    def dropping_encode(
+        self: FakeSentenceTransformer, texts: Sequence[str], **kwargs: object
+    ) -> list[list[float]]:
+        vectors = original_encode(self, texts, **kwargs)
+        return vectors[:-1]
+
+    monkeypatch.setattr(fake_model, "encode", dropping_encode)
+
+    with pytest.raises(AppError) as error:
+        await _service().embed_documents(["one synthetic chunk"])
+
+    assert error.value.code == "embedding_model_unavailable"
+
+
 async def test_model_load_failure_is_reported_safely(
     fake_model: type[FakeSentenceTransformer],
 ) -> None:

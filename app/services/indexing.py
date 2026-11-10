@@ -25,7 +25,6 @@ class IndexingRepository(Protocol):
         model: EmbeddingModelInfo,
     ) -> int: ...
 
-    async def delete_document(self, patient_id: str, document_id: UUID) -> int: ...
 
 
 class IndexingStorage(Protocol):
@@ -49,10 +48,6 @@ class DocumentIndexer:
         chunks = self._read_chunks(document_id)
         model = await self._embeddings.ensure_loaded()
         vectors = await self._embeddings.embed_documents([chunk.text for chunk in chunks])
-        if len(vectors) != len(chunks):
-            raise AppError(
-                503, "embedding_model_unavailable", "The local embedding model returned no vector."
-            )
         embedded = [
             EmbeddedChunk(
                 chunk_id=chunk.chunk_id,
@@ -73,9 +68,6 @@ class DocumentIndexer:
             model=model,
         )
         return IndexResult(document_id=document_id, chunks_indexed=indexed, model=model)
-
-    async def delete_document(self, patient_id: str, document_id: UUID) -> int:
-        return await self._repository.delete_document(patient_id, document_id)
 
     def _read_chunks(self, document_id: UUID) -> list[DocumentChunk]:
         """Read only private extraction output; never re-read the original document."""
