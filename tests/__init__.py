@@ -1,0 +1,1 @@
+"""VitalWatch synthetic test suite."""

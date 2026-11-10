@@ -1,0 +1,77 @@
+"""Typed environment configuration with secure defaults."""
+
+from enum import StrEnum
+from functools import lru_cache
+from pathlib import Path
+from typing import Literal
+
+from pydantic import Field, SecretStr, field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class AppEnvironment(StrEnum):
+    """Supported deployment environments."""
+
+    DEVELOPMENT = "development"
+    TEST = "test"
+    PRODUCTION = "production"
+
+
+_FORBIDDEN_SECRETS = {
+    "replace_me",
+    "change_me",
+    "changeme",
+    "replace_with_secure_random_secret_at_least_32_chars",
+}
+
+
+class Settings(BaseSettings):
+    """Application settings loaded from environment variables or a local .env file."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    app_name: str = "VitalWatch Part 2"
+    app_version: str = "0.1.0"
+    app_env: AppEnvironment = AppEnvironment.DEVELOPMENT
+    app_secret_key: SecretStr = Field(min_length=32)
+    debug: bool = False
+    api_docs_enabled: bool = False
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+
+    database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/vitalwatch"
+    document_storage_directory: Path = Path("./data/documents")
+    document_storage_encryption_key: SecretStr | None = None
+
+    privacy_gate_enabled: bool = True
+    external_llm_enabled: bool = False
+
+    @field_validator("app_secret_key")
+    @classmethod
+    def reject_placeholder_secrets(cls, value: SecretStr) -> SecretStr:
+        """Reject known placeholders before the application can start."""
+
+        if value.get_secret_value().strip().lower() in _FORBIDDEN_SECRETS:
+            raise ValueError("APP_SECRET_KEY must be replaced with a secure random value")
+        return value
+
+    @model_validator(mode="after")
+    def enforce_security_boundaries(self) -> "Settings":
+        """Enforce controls that are not allowed to be disabled."""
+
+        if not self.privacy_gate_enabled:
+            raise ValueError("PRIVACY_GATE_ENABLED cannot be false")
+        if self.app_env == AppEnvironment.PRODUCTION and self.debug:
+            raise ValueError("DEBUG cannot be enabled in production")
+        return self
+
+
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    """Load and cache process settings after all validation succeeds."""
+
+    return Settings()
