@@ -69,11 +69,14 @@ class ExternalDestination(BaseModel):
     @field_validator("endpoint")
     @classmethod
     def require_tls_without_credentials(cls, value: str) -> str:
-        """Reject non-TLS endpoints and embedded credentials before they can be approved."""
+        """Require TLS remotely and allow plaintext only for loopback development."""
 
         parsed = urlsplit(value)
-        if parsed.scheme != "https" or not parsed.hostname:
-            raise ValueError("endpoint must be an absolute https URL")
+        loopback = parsed.hostname in {"localhost", "127.0.0.1", "::1"}
+        if not parsed.hostname or (
+            parsed.scheme != "https" and not (parsed.scheme == "http" and loopback)
+        ):
+            raise ValueError("endpoint must use https (http is loopback-only)")
         if parsed.username is not None or parsed.password is not None:
             raise ValueError("endpoint must not contain credentials")
         if parsed.fragment:

@@ -12,6 +12,8 @@ from app.core.database import get_database_manager
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.request_context import RequestIDMiddleware
+from app.llm.config import build_provider_registry, resolve_slots
+from app.llm.router import ProviderRouter
 from app.privacy.dispatch import ApprovedDispatcher
 from app.privacy.engine import PresidioPiiAnalyzer
 from app.privacy.gate import PrivacyGate
@@ -37,6 +39,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         yield
     finally:
         await app.state.database.close()
+        await app.state.provider_registry.aclose()
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -97,6 +100,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.privacy_dispatcher = ApprovedDispatcher(
         approvals=app.state.privacy_approvals,
         local_only=resolved_settings.privacy_local_only,
+    )
+    app.state.provider_slots = resolve_slots(resolved_settings)
+    app.state.provider_registry = build_provider_registry(
+        resolved_settings, app.state.provider_slots
+    )
+    app.state.provider_router = ProviderRouter(
+        slots=app.state.provider_slots,
+        providers=app.state.provider_registry.providers,
+        dispatcher=app.state.privacy_dispatcher,
+        external_enabled=resolved_settings.external_llm_enabled,
+        local_only=resolved_settings.privacy_local_only,
+        fallback_enabled=resolved_settings.llm_fallback_enabled,
     )
     app.state.document_processor = DocumentProcessor(
         app.state.document_repository,

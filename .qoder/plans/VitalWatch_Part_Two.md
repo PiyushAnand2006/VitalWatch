@@ -163,14 +163,14 @@ After each stage, run its focused tests and then the complete current suite with
 - **Tests:** varied/malformed identifiers, PII in text and metadata, internal IDs, date handling, rare combinations, prompt-injection text, Presidio unavailable, gate exceptions, payload mutation, wrong destination, fallback without re-approval, secret-free logs, and zero spy-provider calls in every blocked/local-only case. ✅
 - **Gate:** privacy/security tests pass before any live provider adapter is connected. ✅
 
-### Stage 7 — Providers, prompts, and routing
-- [ ] Define normalized LLM request/response and prepared-payload interfaces plus versioned explanation/reasoning prompts.
-- [ ] Verify current official API documentation, then implement isolated NVIDIA, Google, and configurable Llama-compatible adapters without inventing endpoints or model IDs.
-- [ ] Add endpoint/model/auth configuration, TLS requirements for remote calls, timeouts, bounded transient retries, rate limits, safe errors, and response normalization.
-- [ ] Configure three reasoner slots and one separate adjudicator slot; fallback remains disabled by default and always requires fresh approval.
-- [ ] Add `/api/v1/providers` with enabled/configuration status only, never secrets.
-- **Tests:** mocked request/response normalization, malformed responses, timeout/retry bounds, authentication failures, routing, disabled slots, destination approval, payload digest enforcement, fallback re-approval, and metadata/log redaction.
-- **Gate:** all tests run without API keys. Live behavior is not claimed unless a separately approved synthetic-data smoke test succeeds.
+### Stage 7 — Providers, prompts, and routing ✅
+- [x] Define normalized LLM request/response and prepared-payload interfaces plus versioned explanation/reasoning prompts.
+- [x] Verify current official API documentation, then implement isolated NVIDIA, Google, and configurable Llama-compatible adapters without inventing endpoints or model IDs.
+- [x] Add endpoint/model/auth configuration, TLS requirements for remote calls, timeouts, bounded transient retries, rate limits, safe errors, and response normalization.
+- [x] Configure three reasoner slots and one separate adjudicator slot; fallback remains disabled by default and always requires fresh approval.
+- [x] Add `/api/v1/providers` with enabled/configuration status only, never secrets.
+- **Tests:** mocked request/response normalization, malformed responses, timeout/retry bounds, authentication failures, routing, disabled slots, destination approval, payload digest enforcement, fallback re-approval, and metadata/log redaction. ✅
+- **Gate:** all tests run without API keys. Live behavior is not claimed unless a separately approved synthetic-data smoke test succeeds. ✅ (60 focused Stage 7 tests pass; no live provider call was made.)
 
 ### Stage 8 — LangGraph orchestration and deterministic verification
 - [ ] Implement typed graph state and the required nodes: context loading, safety precheck, independent reasoning, normalization, deterministic validation, critique, bounded revision, safety review, candidate gate, final adjudication, final validation, and repair/abstain.
