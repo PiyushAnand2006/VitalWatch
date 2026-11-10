@@ -3,7 +3,18 @@
 from typing import Annotated, cast
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Path, Query, Request, Response, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Path,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+    status,
+)
 
 from app.core.auth import AuthenticatedUser, get_current_user
 from app.core.exceptions import AppError
@@ -43,6 +54,7 @@ async def _audited_authorized_user(
 )
 async def upload_document(
     request: Request,
+    background_tasks: BackgroundTasks,
     patient_id: Annotated[str, Path(min_length=1, max_length=128)],
     file: Annotated[UploadFile, File(description="PDF, TXT, PNG, JPEG, or DOCX document")],
     user: Annotated[AuthenticatedUser, Depends(_audited_authorized_user)],
@@ -81,6 +93,7 @@ async def upload_document(
     await request.app.state.audit_service.record(
         "document.upload", "success", actor_ref=user.user_id, resource_type="document"
     )
+    background_tasks.add_task(request.app.state.document_processor.process, patient_id, document.id)
     return cast(DocumentSummary, document)
 
 
@@ -124,6 +137,7 @@ async def get_document(
 )
 async def reprocess_document(
     request: Request,
+    background_tasks: BackgroundTasks,
     patient_id: str,
     document_id: UUID,
     user: Annotated[AuthenticatedUser, Depends(_audited_authorized_user)],
@@ -136,6 +150,7 @@ async def reprocess_document(
     await request.app.state.audit_service.record(
         "document.reprocess", "success", actor_ref=user.user_id, resource_type="document"
     )
+    background_tasks.add_task(request.app.state.document_processor.process, patient_id, document_id)
     return cast(DocumentSummary, document)
 
 
@@ -152,6 +167,7 @@ async def delete_document(
     if storage_key is None:
         raise AppError(404, "document_not_found", "The document was not found.")
     request.app.state.document_storage.delete(storage_key)
+    request.app.state.document_storage.delete(f"{document_id}.extraction.json")
     # Stage 4 will inject the vector index here; deletion is intentionally coupled at this boundary.
     await request.app.state.audit_service.record(
         "document.delete", "success", actor_ref=user.user_id, resource_type="document"

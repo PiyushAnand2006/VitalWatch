@@ -4,7 +4,7 @@ Privacy-first document RAG and verified-explanation backend. This repository is 
 
 ## Current implementation status
 
-**Stage 2 — authorization and secure document lifecycle** is implemented on top of the foundation:
+**Stages 2–3 — secure document lifecycle and local extraction** are implemented on top of the foundation:
 
 - typed environment configuration with secure defaults;
 - FastAPI application factory and private runtime-directory initialization;
@@ -14,8 +14,10 @@ Privacy-first document RAG and verified-explanation backend. This repository is 
 - Bearer JWT authentication plus server-side PostgreSQL patient grants;
 - private original storage with generated filenames, checksums, duplicate detection and lifecycle metadata;
 - authorized document upload/list/status/reprocess/delete API routes.
+- local PDF, image, TXT, and DOCX extraction; scanned pages use installed Tesseract OCR;
+- page-provenance chunks and private structured extraction output; documents finish as `processed` or `failed`.
 
-Extraction/OCR, embeddings, pgvector retrieval, evidence compilation, Presidio, external providers, LangGraph, and prediction contracts are not implemented yet. No SLM or Part 1 temporal prediction code is used.
+Embeddings, pgvector retrieval, evidence compilation, Presidio, external providers, LangGraph, and prediction contracts are not implemented yet. No SLM or Part 1 temporal prediction code is used.
 
 ## Requirements
 

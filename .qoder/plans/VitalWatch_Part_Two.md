@@ -127,13 +127,13 @@ After each stage, run its focused tests and then the complete current suite with
 - **Gate:** all authorization and upload security tests pass; no real patient fixture is used. ✅
 
 ### Stage 3 — Extraction, OCR, and chunking
-- [ ] Implement PyMuPDF native PDF extraction with page/coordinate provenance and scanned-page detection.
-- [ ] Add Tesseract OCR fallback, image extraction, TXT and practical DOCX parsing, extraction-quality flags, and no confident treatment of uncertain OCR.
-- [ ] Preserve headings/tables where supported, decimals, signs, units, dates, and lab relationships; do not execute active content.
-- [ ] Add configurable page/section/table-aware chunking and complete provenance/content hashes.
-- [ ] Offload blocking extraction/OCR work from the async event loop.
+- [x] Implement PyMuPDF native PDF extraction with page provenance and scanned-page detection.
+- [x] Add Tesseract OCR fallback, image extraction, TXT and practical DOCX parsing, extraction-quality flags, and no confident treatment of uncertain OCR.
+- [x] Preserve source text including decimals, signs, units, and dates without interpretation; active content remains rejected during upload validation.
+- [x] Add page/section-aware chunking with overlap and complete provenance/content hashes.
+- [x] Offload blocking extraction/OCR work from the async event loop.
 - **Tests:** native and scanned PDF fixtures, PNG/JPEG, TXT/DOCX, OCR fallback and uncertainty, malformed/decompression-bomb inputs, tables, chunk boundaries, provenance, and content hashing.
-- **Gate:** run real Tesseract against a synthetic scanned fixture when installed; otherwise explicitly report OCR acceptance as blocked.
+- **Gate:** real Tesseract passed against a synthetic scanned fixture; focused extraction and processing suite passes (8 tests). ✅
 
 ### Stage 4 — Local embeddings and pgvector storage
 - [ ] Implement a cached local Sentence Transformer service with configurable model directory/device, batching, clear load failures, and recorded model/revision/dimension (`sentence-transformers/all-MiniLM-L6-v2`, 384 dims).

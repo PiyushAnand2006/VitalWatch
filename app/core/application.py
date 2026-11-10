@@ -13,7 +13,9 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.request_context import RequestIDMiddleware
 from app.repositories.documents import DocumentRepository, PatientGrantRepository
+from app.services.document_processing import DocumentProcessor
 from app.services.document_storage import LocalDocumentStorage
+from app.services.extraction import DocumentExtractor
 
 
 @asynccontextmanager
@@ -52,6 +54,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.patient_grants = PatientGrantRepository(database.sessionmaker)
     app.state.document_repository = DocumentRepository(database.sessionmaker)
     app.state.document_storage = LocalDocumentStorage(resolved_settings.document_storage_directory)
+    app.state.document_processor = DocumentProcessor(
+        app.state.document_repository,
+        app.state.document_storage,
+        DocumentExtractor(resolved_settings.ocr_language, resolved_settings.tesseract_command),
+    )
 
     app.add_middleware(RequestIDMiddleware)
     register_exception_handlers(app)
