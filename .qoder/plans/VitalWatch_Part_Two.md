@@ -115,16 +115,16 @@ After each stage, run its focused tests and then the complete current suite with
 - **Tests:** settings validation, startup failure for unsafe configuration, request IDs, safe errors, secret/PHI log redaction, liveness, readiness, database manager instantiation, and local storage CRUD.
 - **Gate:** report actual focused/full-suite results; health endpoints and database initialization pass through FastAPI test requests without requiring a live database.
 
-### Stage 2 — Authorization and secure document lifecycle
-- [ ] Add PostgreSQL models/repositories using SQLAlchemy 2.x: users, patient profiles, patient access grants, and document metadata.
-- [ ] Add Alembic migration for Stage 2 database tables.
-- [ ] Implement JWT authentication, server-side patient grants, authorization dependencies, pagination, and route audit events.
-- [ ] Implement private upload storage using `DocumentStorage` abstraction with generated filenames, extension/MIME/signature/size checks, SHA-256 checksums, duplicate detection, and protected source metadata.
-- [ ] Implement `uploaded`, `processing`, `processed`, `failed`, and `quarantined` transitions plus explicit reprocessing and retention/deletion metadata.
-- [ ] Add document upload/list/status/reprocess/delete routes with consistent errors; wire vector deletion through a repository interface for Stage 4.
-- [ ] Add configurable request/user rate limits and safe handling for malformed or active-content files.
+### Stage 2 — Authorization and secure document lifecycle ✅
+- [x] Add PostgreSQL models/repositories using SQLAlchemy 2.x: users, patient profiles, patient access grants, and document metadata.
+- [x] Add Alembic migration for Stage 2 database tables.
+- [x] Implement JWT authentication, server-side patient grants, authorization dependencies, pagination, and route audit events.
+- [x] Implement private upload storage using `DocumentStorage` abstraction with generated filenames, extension/MIME/signature/size checks, SHA-256 checksums, duplicate detection, and protected source metadata.
+- [x] Implement `uploaded`, `processing`, `processed`, `failed`, and `quarantined` transitions plus explicit reprocessing and retention/deletion metadata.
+- [x] Add document upload/list/status/reprocess/delete routes with consistent errors; wire vector deletion through a repository interface for Stage 4.
+- [x] Add configurable request/user rate limits and safe handling for malformed or active-content files.
 - **Tests:** valid/invalid JWTs, cross-patient access, path traversal, spoofed extensions/MIMEs, oversized/malformed files, duplicates, lifecycle transitions, pagination, safe errors, audit metadata, and unauthorized deletion.
-- **Gate:** all authorization and upload security tests pass; no real patient fixture is used.
+- **Gate:** all authorization and upload security tests pass; no real patient fixture is used. ✅
 
 ### Stage 3 — Extraction, OCR, and chunking
 - [ ] Implement PyMuPDF native PDF extraction with page/coordinate provenance and scanned-page detection.
