@@ -69,7 +69,7 @@ def test_local_document_storage_path_traversal_prevention(tmp_path: Path) -> Non
     storage_dir = tmp_path / "test_docs"
     storage = LocalDocumentStorage(root_dir=storage_dir)
 
-    # Attempt path traversal
-    storage.store("../../evil.txt", b"evil")
+    # Attempt path traversal must be rejected with ValueError
+    with pytest.raises(ValueError, match="Invalid document storage key"):
+        storage.store("../../evil.txt", b"evil")
     assert not (tmp_path / "evil.txt").exists()
-    assert (storage_dir / "evil.txt").exists()

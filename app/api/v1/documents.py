@@ -1,6 +1,6 @@
 """Authenticated document lifecycle routes; extraction and indexing are later stages."""
 
-from typing import Annotated
+from typing import Annotated, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Path, Query, Request, Response, UploadFile, status
@@ -81,7 +81,7 @@ async def upload_document(
     await request.app.state.audit_service.record(
         "document.upload", "success", actor_ref=user.user_id, resource_type="document"
     )
-    return document
+    return cast(DocumentSummary, document)
 
 
 @router.get("", response_model=DocumentPage, summary="List authorized documents")
@@ -114,7 +114,7 @@ async def get_document(
     await request.app.state.audit_service.record(
         "document.read", "success", actor_ref=user.user_id, resource_type="document"
     )
-    return found[0]
+    return cast(DocumentSummary, found[0])
 
 
 @router.post(
@@ -136,7 +136,7 @@ async def reprocess_document(
     await request.app.state.audit_service.record(
         "document.reprocess", "success", actor_ref=user.user_id, resource_type="document"
     )
-    return document
+    return cast(DocumentSummary, document)
 
 
 @router.delete(
