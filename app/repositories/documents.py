@@ -3,10 +3,10 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.models import DocumentModel, PatientGrantModel
+from app.models import ChunkEmbeddingModel, DocumentModel, PatientGrantModel
 from app.schemas.documents import DocumentStatus, DocumentSummary
 
 
@@ -101,6 +101,23 @@ class DocumentRepository:
             await session.refresh(record)
             return document_summary(record)
 
+    async def list_processed(
+        self, limit: int = 100, after: UUID | None = None
+    ) -> Sequence[tuple[str, UUID]]:
+        """Keyset-paginate processed documents for a controlled full index rebuild."""
+
+        statement = (
+            select(DocumentModel.patient_id, DocumentModel.id)
+            .where(DocumentModel.status == DocumentStatus.PROCESSED.value)
+            .order_by(DocumentModel.id)
+            .limit(limit)
+        )
+        if after is not None:
+            statement = statement.where(DocumentModel.id > after)
+        async with self._sessions() as session:
+            rows = (await session.execute(statement)).all()
+        return [(str(patient_id), document_id) for patient_id, document_id in rows]
+
     async def delete(self, patient_id: str, document_id: UUID) -> str | None:
         async with self._sessions() as session:
             record = await session.scalar(
@@ -111,6 +128,13 @@ class DocumentRepository:
             if record is None:
                 return None
             storage_key = record.storage_key
+            # Vectors are removed in the same transaction so no orphaned index rows remain.
+            await session.execute(
+                delete(ChunkEmbeddingModel).where(
+                    ChunkEmbeddingModel.patient_id == patient_id,
+                    ChunkEmbeddingModel.document_id == document_id,
+                )
+            )
             await session.delete(record)
             await session.commit()
             return storage_key

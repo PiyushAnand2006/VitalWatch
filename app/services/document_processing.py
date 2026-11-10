@@ -24,6 +24,10 @@ class ProcessingStorage(Protocol):
     def store(self, key: str, data: bytes) -> str: ...
 
 
+class ProcessingIndexer(Protocol):
+    async def index_document(self, patient_id: str, document_id: UUID) -> object: ...
+
+
 class DocumentProcessor:
     """Process one stored original and retain only private, structured extraction output."""
 
@@ -32,10 +36,12 @@ class DocumentProcessor:
         repository: ProcessingRepository,
         storage: ProcessingStorage,
         extractor: DocumentExtractor,
+        indexer: ProcessingIndexer | None = None,
     ) -> None:
         self._repository = repository
         self._storage = storage
         self._extractor = extractor
+        self._indexer = indexer
 
     async def process(self, patient_id: str, document_id: UUID) -> None:
         document = await self._repository.get(patient_id, document_id)
@@ -56,6 +62,8 @@ class DocumentProcessor:
             self._storage.store(
                 f"{document_id}.extraction.json", json.dumps(payload).encode("utf-8")
             )
+            if self._indexer is not None:
+                await self._indexer.index_document(patient_id, document_id)
             await self._repository.update_status(patient_id, document_id, DocumentStatus.PROCESSED)
         except Exception:
             await self._repository.update_status(patient_id, document_id, DocumentStatus.FAILED)

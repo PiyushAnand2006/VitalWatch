@@ -1,4 +1,4 @@
-"""Shared synthetic Stage 1 test fixtures."""
+"""Shared synthetic test fixtures."""
 
 from collections.abc import Iterator
 from pathlib import Path
@@ -8,6 +8,9 @@ from fastapi.testclient import TestClient
 
 from app.core.application import create_app
 from app.core.config import AppEnvironment, Settings
+from app.core.event_loop import ensure_windows_selector_event_loop
+
+ensure_windows_selector_event_loop()
 
 TEST_SECRET = "stage1-synthetic-test-secret-with-at-least-32-characters"
 _ENVIRONMENT_VARIABLES = (
@@ -25,6 +28,15 @@ _ENVIRONMENT_VARIABLES = (
     "UPLOAD_MAX_PAGES",
     "PRIVACY_GATE_ENABLED",
     "EXTERNAL_LLM_ENABLED",
+    "EMBEDDING_MODEL_NAME",
+    "EMBEDDING_MODEL_REVISION",
+    "EMBEDDING_MODEL_DIRECTORY",
+    "EMBEDDING_DEVICE",
+    "EMBEDDING_BATCH_SIZE",
+    "EMBEDDING_LOCAL_FILES_ONLY",
+    "RETRIEVAL_TOP_K",
+    "RETRIEVAL_MIN_SCORE",
+    "RETRIEVAL_MAX_QUERY_CHARS",
 )
 
 
@@ -43,6 +55,7 @@ def settings(tmp_path: Path) -> Settings:
         app_env=AppEnvironment.TEST,
         app_secret_key=TEST_SECRET,
         document_storage_directory=tmp_path / "documents",
+        embedding_model_directory=tmp_path / "models",
         database_url="postgresql+psycopg://postgres:postgres@localhost:5432/vitalwatch_test",
     )
 

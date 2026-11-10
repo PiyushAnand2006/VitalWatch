@@ -61,6 +61,28 @@ def test_production_debug_is_rejected() -> None:
         )
 
 
+def test_embedding_defaults_target_the_local_index_model() -> None:
+    settings = Settings(_env_file=None, app_secret_key=TEST_SECRET)
+
+    assert settings.embedding_model_name == "sentence-transformers/all-MiniLM-L6-v2"
+    assert settings.embedding_model_revision == "main"
+    assert settings.embedding_device == "cpu"
+    assert settings.embedding_batch_size == 32
+    assert settings.embedding_local_files_only is False
+
+
+def test_embedding_batch_size_is_bounded() -> None:
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, app_secret_key=TEST_SECRET, embedding_batch_size=0)
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, app_secret_key=TEST_SECRET, embedding_batch_size=257)
+
+
+def test_unknown_embedding_device_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, app_secret_key=TEST_SECRET, embedding_device="tpu")
+
+
 def test_environment_values_are_loaded_as_typed_settings(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

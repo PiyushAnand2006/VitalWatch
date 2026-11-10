@@ -23,7 +23,7 @@ class ReadinessCheck(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str
-    status: Literal["passed", "failed"]
+    status: Literal["passed", "failed", "skipped"]
     message: str
 
 

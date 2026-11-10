@@ -25,8 +25,10 @@ async def health(request: Request) -> HealthResponse:
 @router.get("/ready", response_model=ReadyResponse, summary="Dependency readiness")
 async def ready(request: Request, response: Response) -> ReadyResponse:
     settings: Settings = request.app.state.settings
-    checks = ReadinessService(settings).evaluate()
-    is_ready = all(check.status == "passed" for check in checks)
+    checks = await ReadinessService(
+        settings, request.app.state.database, request.app.state.embeddings
+    ).evaluate()
+    is_ready = all(check.status != "failed" for check in checks)
     if not is_ready:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return ReadyResponse(

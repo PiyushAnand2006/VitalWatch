@@ -8,6 +8,8 @@ from typing import Literal
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.schemas.embeddings import DEFAULT_EMBEDDING_MODEL_NAME
+
 
 class AppEnvironment(StrEnum):
     """Supported deployment environments."""
@@ -50,6 +52,19 @@ class Settings(BaseSettings):
     upload_max_pages: int = Field(default=200, ge=1, le=1000)
     ocr_language: str = Field(default="eng", min_length=2, max_length=16)
     tesseract_command: Path | None = None
+
+    embedding_model_name: str = Field(
+        default=DEFAULT_EMBEDDING_MODEL_NAME, min_length=1, max_length=255
+    )
+    embedding_model_revision: str = Field(default="main", min_length=1, max_length=128)
+    embedding_model_directory: Path = Path("./data/models")
+    embedding_device: Literal["cpu", "cuda", "mps", "auto"] = "cpu"
+    embedding_batch_size: int = Field(default=32, ge=1, le=256)
+    embedding_local_files_only: bool = False
+
+    retrieval_top_k: int = Field(default=5, ge=1, le=50)
+    retrieval_min_score: float = Field(default=0.25, ge=0.0, le=1.0)
+    retrieval_max_query_chars: int = Field(default=2000, ge=1, le=8000)
 
     privacy_gate_enabled: bool = True
     external_llm_enabled: bool = False

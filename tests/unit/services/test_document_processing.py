@@ -55,6 +55,18 @@ class FakeExtractor:
         )
 
 
+class FakeIndexer:
+    def __init__(self, failure: Exception | None = None) -> None:
+        self.calls: list[tuple[str, object]] = []
+        self.failure = failure
+
+    async def index_document(self, patient_id: str, document_id: object) -> object:
+        self.calls.append((patient_id, document_id))
+        if self.failure is not None:
+            raise self.failure
+        return None
+
+
 def _document() -> DocumentSummary:
     now = datetime.now(UTC)
     return DocumentSummary(
@@ -97,6 +109,35 @@ def test_processor_marks_document_processed_and_stores_private_result() -> None:
     assert saved["pages"][0]["method"] == "text"
     assert saved["chunks"][0]["page_number"] == 1
     assert len(saved["chunks"][0]["content_hash"]) == 64
+
+
+async def test_processor_indexes_chunks_before_marking_processed() -> None:
+    document = _document()
+    repository = FakeRepository(document)
+    storage = FakeStorage(b"Laboratory Results:\nSodium 140 mmol/L")
+    indexer = FakeIndexer()
+
+    await DocumentProcessor(  # type: ignore[arg-type]
+        repository, storage, FakeExtractor(), indexer
+    ).process(document.patient_id, document.id)
+
+    assert indexer.calls == [(document.patient_id, document.id)]
+    assert repository.statuses == [DocumentStatus.PROCESSING, DocumentStatus.PROCESSED]
+    extraction = json.loads(storage.written[f"{document.id}.extraction.json"])
+    assert extraction["chunks"][0]["chunk_id"] == "p1-c1"
+
+
+async def test_processor_marks_document_failed_when_indexing_fails() -> None:
+    document = _document()
+    repository = FakeRepository(document)
+    storage = FakeStorage(b"Laboratory Results:\nSodium 140 mmol/L")
+    indexer = FakeIndexer(failure=RuntimeError("synthetic embedding outage"))
+
+    await DocumentProcessor(  # type: ignore[arg-type]
+        repository, storage, FakeExtractor(), indexer
+    ).process(document.patient_id, document.id)
+
+    assert repository.statuses == [DocumentStatus.PROCESSING, DocumentStatus.FAILED]
 
 
 def test_processor_marks_document_failed_when_extraction_fails() -> None:

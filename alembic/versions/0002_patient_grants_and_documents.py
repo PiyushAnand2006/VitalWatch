@@ -1,6 +1,6 @@
 """Add patient grants and protected document metadata.
 
-Revision ID: 0002_patient_grants_and_documents
+Revision ID: 0002_grants_and_documents
 Revises: 0001_enable_pgvector
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "0002_patient_grants_and_documents"
+revision: str = "0002_grants_and_documents"
 down_revision: str | None = "0001_enable_pgvector"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

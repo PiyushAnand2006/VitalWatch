@@ -13,9 +13,14 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.request_context import RequestIDMiddleware
 from app.repositories.documents import DocumentRepository, PatientGrantRepository
+from app.repositories.embeddings import ChunkEmbeddingRepository
 from app.services.document_processing import DocumentProcessor
 from app.services.document_storage import LocalDocumentStorage
+from app.services.embeddings import LocalEmbeddingService
+from app.services.evidence import EvidenceCompiler
 from app.services.extraction import DocumentExtractor
+from app.services.indexing import DocumentIndexer
+from app.services.retrieval import RetrievalService
 
 
 @asynccontextmanager
@@ -54,10 +59,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.patient_grants = PatientGrantRepository(database.sessionmaker)
     app.state.document_repository = DocumentRepository(database.sessionmaker)
     app.state.document_storage = LocalDocumentStorage(resolved_settings.document_storage_directory)
+    app.state.vector_repository = ChunkEmbeddingRepository(database.sessionmaker)
+    app.state.embeddings = LocalEmbeddingService(
+        model_name=resolved_settings.embedding_model_name,
+        revision=resolved_settings.embedding_model_revision,
+        cache_directory=resolved_settings.embedding_model_directory,
+        device=resolved_settings.embedding_device,
+        batch_size=resolved_settings.embedding_batch_size,
+        local_files_only=resolved_settings.embedding_local_files_only,
+    )
+    app.state.document_indexer = DocumentIndexer(
+        app.state.vector_repository, app.state.document_storage, app.state.embeddings
+    )
+    app.state.retrieval_service = RetrievalService(
+        app.state.vector_repository,
+        app.state.embeddings,
+        top_k=resolved_settings.retrieval_top_k,
+        min_score=resolved_settings.retrieval_min_score,
+        max_query_chars=resolved_settings.retrieval_max_query_chars,
+    )
+    app.state.evidence_compiler = EvidenceCompiler()
     app.state.document_processor = DocumentProcessor(
         app.state.document_repository,
         app.state.document_storage,
         DocumentExtractor(resolved_settings.ocr_language, resolved_settings.tesseract_command),
+        app.state.document_indexer,
     )
 
     app.add_middleware(RequestIDMiddleware)

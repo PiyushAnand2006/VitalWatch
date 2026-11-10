@@ -5,10 +5,13 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-import app.models  # noqa: F401 -- registers Stage 2 tables on Base.metadata
+import app.models  # noqa: F401 -- registers application tables on Base.metadata
 from alembic import context
 from app.core.config import get_settings
 from app.core.database import Base
+from app.core.event_loop import ensure_windows_selector_event_loop
+
+ensure_windows_selector_event_loop()
 
 # Alembic Config object
 config = context.config

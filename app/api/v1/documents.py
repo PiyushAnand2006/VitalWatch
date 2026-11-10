@@ -1,4 +1,4 @@
-"""Authenticated document lifecycle routes; extraction and indexing are later stages."""
+"""Authenticated document lifecycle routes; processing also indexes chunk vectors."""
 
 from typing import Annotated, cast
 from uuid import UUID
@@ -168,7 +168,6 @@ async def delete_document(
         raise AppError(404, "document_not_found", "The document was not found.")
     request.app.state.document_storage.delete(storage_key)
     request.app.state.document_storage.delete(f"{document_id}.extraction.json")
-    # Stage 4 will inject the vector index here; deletion is intentionally coupled at this boundary.
     await request.app.state.audit_service.record(
         "document.delete", "success", actor_ref=user.user_id, resource_type="document"
     )

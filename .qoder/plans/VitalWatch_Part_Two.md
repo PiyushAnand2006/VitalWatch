@@ -135,24 +135,24 @@ After each stage, run its focused tests and then the complete current suite with
 - **Tests:** native and scanned PDF fixtures, PNG/JPEG, TXT/DOCX, OCR fallback and uncertainty, malformed/decompression-bomb inputs, tables, chunk boundaries, provenance, and content hashing.
 - **Gate:** real Tesseract passed against a synthetic scanned fixture; focused extraction and processing suite passes (8 tests). ✅
 
-### Stage 4 — Local embeddings and pgvector storage
-- [ ] Implement a cached local Sentence Transformer service with configurable model directory/device, batching, clear load failures, and recorded model/revision/dimension (`sentence-transformers/all-MiniLM-L6-v2`, 384 dims).
-- [ ] Implement PostgreSQL chunk embeddings table with pgvector column (`Vector(384)`) and HNSW index.
-- [ ] Add Alembic migration for pgvector chunk embeddings schema and HNSW indexes.
-- [ ] Implement patient-specific pgvector repositories with server-controlled add/query/delete/re-index operations.
-- [ ] Store model compatibility metadata (model name, revision, dimension) and reject mixing incompatible vectors in the same table/index.
-- [ ] Connect processed documents to indexing and ensure document deletion transactionally removes chunks and vectors.
-- **Tests:** embedding interface and real model dimension (384), persistent reload, patient isolation in vector search, filtered queries, deletion, re-indexing, model mismatch rejection, and model-load failure.
-- **Gate:** demonstrate actual local `all-MiniLM-L6-v2` embeddings and pgvector persistence using temporary synthetic data; mocks alone are insufficient for this gate.
+### Stage 4 — Local embeddings and pgvector storage ✅
+- [x] Implement a cached local Sentence Transformer service with configurable model directory/device, batching, clear load failures, and recorded model/revision/dimension (`sentence-transformers/all-MiniLM-L6-v2`, 384 dims).
+- [x] Implement PostgreSQL chunk embeddings table with pgvector column (`Vector(384)`) and HNSW index.
+- [x] Add Alembic migration for pgvector chunk embeddings schema and HNSW indexes.
+- [x] Implement patient-specific pgvector repositories with server-controlled add/query/delete/re-index operations.
+- [x] Store model compatibility metadata (model name, revision, dimension) and reject mixing incompatible vectors in the same table/index.
+- [x] Connect processed documents to indexing and ensure document deletion transactionally removes chunks and vectors.
+- **Tests:** embedding interface and real model dimension (384), persistent reload, patient isolation in vector search, filtered queries, deletion, re-indexing, model mismatch rejection, and model-load failure. ✅
+- **Gate:** demonstrate actual local `all-MiniLM-L6-v2` embeddings and pgvector persistence using temporary synthetic data; mocks alone are insufficient for this gate. ✅
 
-### Stage 5 — Retrieval and deterministic evidence
-- [ ] Implement local query embedding, authorized top-k retrieval via pgvector cosine distance, relevance thresholds, server-built date/document SQL filters, overlap deduplication, and typed no-evidence results.
-- [ ] Add strict Pydantic v2 schemas for documents, chunks, retrieval, evidence, validation, and API contracts.
-- [ ] Implement deterministic common-lab/date/number/unit/reference-range parsing without inferring missing values or units.
-- [ ] Build normalized evidence packages preserving explicit/uncertain/missing/conflicting states, source provenance, content quality, and stable evidence IDs.
-- [ ] Treat retrieved text solely as untrusted data and enforce as-of/future-data boundaries.
-- **Tests:** relevance/no-result behavior, filters/deduplication, cross-patient attempts, future-note exclusion, exact decimals/signs/units/dates, missing and conflicting labs, provenance resolution, and malformed schema rejection.
-- **Gate:** synthetic retrieval-to-evidence integration passes with real local embeddings/pgvector and no external LLM.
+### Stage 5 — Retrieval and deterministic evidence ✅
+- [x] Implement local query embedding, authorized top-k retrieval via pgvector cosine distance, relevance thresholds, server-built date/document SQL filters, overlap deduplication, and typed no-evidence results.
+- [x] Add strict Pydantic v2 schemas for documents, chunks, retrieval, evidence, validation, and API contracts.
+- [x] Implement deterministic common-lab/date/number/unit/reference-range parsing without inferring missing values or units.
+- [x] Build normalized evidence packages preserving explicit/uncertain/missing/conflicting states, source provenance, content quality, and stable evidence IDs.
+- [x] Treat retrieved text solely as untrusted data and enforce as-of/future-data boundaries.
+- **Tests:** relevance/no-result behavior, filters/deduplication, cross-patient attempts, future-note exclusion, exact decimals/signs/units/dates, missing and conflicting labs, provenance resolution, and malformed schema rejection. ✅
+- **Gate:** synthetic retrieval-to-evidence integration passes with real local embeddings/pgvector and no external LLM. ✅
 
 ### Stage 6 — Presidio privacy pipeline and mandatory gate
 - [ ] Configure Microsoft Presidio plus custom recognizers for names, contacts, addresses, government/medical/internal IDs, DOB, and identifying facilities.

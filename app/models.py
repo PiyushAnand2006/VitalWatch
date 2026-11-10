@@ -1,12 +1,14 @@
-"""PostgreSQL persistence models for patient-scoped Stage 2 resources."""
+"""PostgreSQL persistence models for patient-scoped resources and chunk vectors."""
 
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Index, String, UniqueConstraint
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
+from app.schemas.embeddings import EMBEDDING_DIMENSION
 
 
 class PatientGrantModel(Base):
@@ -48,4 +50,42 @@ class DocumentModel(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
+    )
+
+
+class ChunkEmbeddingModel(Base):
+    """A private chunk vector bound to one patient, document, and model identity."""
+
+    __tablename__ = "chunk_embeddings"
+    __table_args__ = (
+        UniqueConstraint("document_id", "chunk_id", name="uq_chunk_embedding_document_chunk"),
+        Index("ix_chunk_embeddings_patient_document", "patient_id", "document_id"),
+        Index("ix_chunk_embeddings_model", "model_name", "model_revision", "dimension"),
+        Index(
+            "ix_chunk_embeddings_embedding_hnsw",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_with={"m": 16, "ef_construction": 64},
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    patient_id: Mapped[str] = mapped_column(String(128), index=True)
+    document_id: Mapped[UUID] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"), index=True
+    )
+    chunk_id: Mapped[str] = mapped_column(String(64))
+    content_hash: Mapped[str] = mapped_column(String(64))
+    page_number: Mapped[int]
+    section: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    text: Mapped[str] = mapped_column(Text)
+    method: Mapped[str] = mapped_column(String(32))
+    quality: Mapped[str] = mapped_column(String(16))
+    model_name: Mapped[str] = mapped_column(String(255))
+    model_revision: Mapped[str] = mapped_column(String(128))
+    dimension: Mapped[int]
+    embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIMENSION))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
