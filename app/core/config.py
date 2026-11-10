@@ -67,6 +67,11 @@ class Settings(BaseSettings):
     retrieval_max_query_chars: int = Field(default=2000, ge=1, le=8000)
 
     privacy_gate_enabled: bool = True
+    privacy_local_only: bool = True
+    privacy_approval_ttl_seconds: int = Field(default=300, ge=30, le=3600)
+    privacy_max_question_chars: int = Field(default=2000, ge=1, le=8000)
+    privacy_nlp_model: str = Field(default="en_core_web_sm", min_length=1, max_length=128)
+    privacy_analyzer_score_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
     external_llm_enabled: bool = False
 
     @field_validator("app_secret_key")
@@ -84,6 +89,10 @@ class Settings(BaseSettings):
 
         if not self.privacy_gate_enabled:
             raise ValueError("PRIVACY_GATE_ENABLED cannot be false")
+        if not self.privacy_local_only and not self.external_llm_enabled:
+            raise ValueError(
+                "PRIVACY_LOCAL_ONLY cannot be false while EXTERNAL_LLM_ENABLED is false"
+            )
         if self.app_env == AppEnvironment.PRODUCTION and self.debug:
             raise ValueError("DEBUG cannot be enabled in production")
         return self

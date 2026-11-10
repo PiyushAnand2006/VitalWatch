@@ -69,7 +69,9 @@ def postgres_connection(postgres_uri: str) -> Iterator[psycopg.Connection[tuple[
     """Give each test a clean synthetic patient/document/vector state."""
 
     with psycopg.connect(postgres_uri, autocommit=True) as connection:
-        connection.execute("truncate table chunk_embeddings, documents, patient_grants")
+        connection.execute(
+            "truncate table privacy_approvals, chunk_embeddings, documents, patient_grants"
+        )
         yield connection
 
 

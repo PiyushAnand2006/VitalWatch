@@ -1,10 +1,11 @@
 """Deterministic local parsing of untrusted retrieved text into evidence packages."""
 
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from datetime import date, datetime
 from decimal import Decimal
 from hashlib import sha256
+from types import MappingProxyType
 
 from app.schemas.evidence import (
     EvidenceFlag,
@@ -71,6 +72,7 @@ _CANONICAL_LABS: dict[str, str] = {
     "tsh": "TSH",
     "hba1c": "HbA1c",
 }
+LAB_ALIASES: Mapping[str, str] = MappingProxyType(_CANONICAL_LABS)
 _ALIASES = sorted(_CANONICAL_LABS, key=len, reverse=True)
 
 _NUMBER = r"[+-]?(?:\d+(?:\.\d+)?|\.\d+)"

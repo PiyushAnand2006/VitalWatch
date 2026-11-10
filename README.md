@@ -4,7 +4,7 @@ Privacy-first document RAG and verified-explanation backend. This repository is 
 
 ## Current implementation status
 
-**Stages 2–4 — secure document lifecycle, local extraction, and pgvector indexing** are implemented on top of the foundation:
+**Stages 2–6 — secure document lifecycle, local extraction, pgvector indexing, retrieval, and the mandatory privacy gate** are implemented on top of the foundation:
 
 - typed environment configuration with secure defaults;
 - FastAPI application factory and private runtime-directory initialization;
@@ -18,9 +18,12 @@ Privacy-first document RAG and verified-explanation backend. This repository is 
 - page-provenance chunks and private structured extraction output; documents finish as `processed` or `failed`;
 - a cached local `sentence-transformers/all-MiniLM-L6-v2` service (384 dimensions) that records model, revision, and dimension;
 - patient-scoped chunk vectors in PostgreSQL/pgvector with a cosine HNSW index and model-identity compatibility checks;
-- processed documents are embedded and indexed locally; document deletion removes chunks and vectors transactionally (explicit delete plus `ON DELETE CASCADE`).
+- processed documents are embedded and indexed locally; document deletion removes chunks and vectors transactionally (explicit delete plus `ON DELETE CASCADE`);
+- patient-scoped retrieval with an explicit no-evidence result and deterministic, provenance-checked evidence packages;
+- Presidio-based minimization, question-specific field allow-listing, redaction/tokenization, temporal generalization, and review flags;
+- single-use, destination-bound approvals with a PII-free PostgreSQL audit table and a fail-closed local-only dispatch guard.
 
-Retrieval APIs, evidence compilation, Presidio, external providers, LangGraph, and prediction contracts are not implemented yet. No SLM or Part 1 temporal prediction code is used.
+HTTP routes for retrieval and privacy decisions, external provider adapters, LangGraph, and prediction contracts are not implemented yet. External dispatch is disabled by default; no SLM or Part 1 temporal prediction code is used.
 
 ## Requirements
 
@@ -37,6 +40,7 @@ python -m venv .venv
 python -m pip install -e ".[dev]"
 Copy-Item .env.example .env
 python -c "import secrets; print(secrets.token_urlsafe(48))"
+python -m spacy download en_core_web_sm
 ```
 
 Copy the generated value into `APP_SECRET_KEY` in `.env`. The application rejects the example placeholder, secrets shorter than 32 characters, production debug mode, and attempts to disable the mandatory privacy gate.
@@ -62,7 +66,7 @@ Available endpoints:
 | GET/DELETE | `/api/v1/patients/{patient_id}/documents/{document_id}` | Read status/metadata or delete an authorized document. |
 | POST | `/api/v1/patients/{patient_id}/documents/{document_id}/reprocess` | Return an authorized document to `uploaded` status. |
 
-Readiness (`/api/v1/ready`) checks configuration, the document storage directory, a real `SELECT 1` against PostgreSQL, and the local embedding model. A failed database check returns HTTP 503. The embedding check reports `skipped` while the model is still lazy and unloaded, and `passed` once it is loaded; readiness requires that no check is `failed`, so an unloaded model does not by itself claim readiness of retrieval. OCR, the privacy service, and external providers are not claimed operational.
+Readiness (`/api/v1/ready`) checks configuration, the document storage directory, a real `SELECT 1` against PostgreSQL, and the local embedding model. A failed database check returns HTTP 503. The embedding check reports `skipped` while the model is still lazy and unloaded, and `passed` once it is loaded; readiness requires that no check is `failed`, so an unloaded model does not by itself claim readiness of retrieval. OCR, Presidio availability, and external providers are not included in the readiness check.
 
 Every response includes `X-Request-ID`. A syntactically valid incoming header is reused for correlation; an absent or invalid value is replaced with a generated UUID.
 
@@ -76,7 +80,7 @@ The foundation uses PostgreSQL via SQLAlchemy 2.x and Alembic for migrations, wi
 alembic upgrade head
 ```
 
-Migrations: `0001_enable_pgvector` enables the `vector` extension, `0002_grants_and_documents` adds patient grants and document metadata, and `0003_chunk_embeddings` adds the `chunk_embeddings` table with a `vector(384)` column and a cosine HNSW index. Database connection is decoupled from application startup so that health checks and local testing run cleanly without requiring a live database.
+Migrations: `0001_enable_pgvector` enables the `vector` extension, `0002_grants_and_documents` adds patient grants and document metadata, `0003_chunk_embeddings` adds the `chunk_embeddings` table with a `vector(384)` column and a cosine HNSW index, and `0004_privacy_approvals` adds the PII-free approval audit table. Database connection is decoupled from application startup so that health checks and local testing run cleanly without requiring a live database.
 
 ## Local embeddings and vector index (Stage 4)
 
@@ -114,6 +118,22 @@ Each observation carries a stable evidence ID derived from its source chunk, lin
 
 Configuration: `RETRIEVAL_TOP_K` (default `5`), `RETRIEVAL_MIN_SCORE` (default `0.25`), and `RETRIEVAL_MAX_QUERY_CHARS` (default `2000`).
 
+## Privacy gate and approvals (Stage 6)
+
+`PrivacyGate.prepare` is the mandatory boundary before any external model call. It verifies evidence provenance, classifies the question (`lab_value`, `trend`, `medication`, `diagnosis`, or `general`), and builds a payload from a question-specific field allow-list. Irrelevant labs are excluded, requested labs that are absent become `missing_information`, and no patient ID, document/chunk ID, filename, checksum, storage key, score, or raw retrieved text is included.
+
+The question and evidence are processed locally:
+
+- Presidio plus custom recognizers detect names, contact details, addresses, government and medical identifiers, internal IDs, dates of birth, facilities, and ages;
+- detected values are replaced with stable per-request tokens (for example `[PERSON_1]`, `[EMAIL_1]`, `[MEDICAL_ID_1]`); the token vault exists only in memory;
+- dates of birth become age bands (`[AGE_BAND_70_79]`, `[AGE_BAND_90_plus]`), observation dates are reduced to `YYYY-MM`, and malformed or ambiguous dates fail closed;
+- prompt-injection text and risky identifier combinations (person plus context, facility plus date, age 90+, residual PII) are flagged for review;
+- the payload digest is a canonical JSON SHA-256, and the destination digest binds provider, endpoint, model, and purpose.
+
+Every decision is one of `approved`, `rejected`, or `needs_review`. Only an approved decision exposes a payload. Rejections cover local-only mode, empty/oversized questions, provenance failures, Presidio unavailability or failure, unexpected gate errors, and audit-store failure. An approved payload expires after `PRIVACY_APPROVAL_TTL_SECONDS` (default 300) and can be dispatched once; `ApprovedDispatcher` rechecks status, payload digest, destination digest, and expiry, then atomically consumes the approval before calling the transport. Mutation, a wrong destination, reuse, or a fallback route without a fresh approval is blocked. The PostgreSQL `privacy_approvals` row stores hashes, counts, status, and reason/review codes only, never the question, payload, raw patient/actor ID, or PII values.
+
+Presidio uses the local spaCy model from `PRIVACY_NLP_MODEL` (default `en_core_web_sm`). If Presidio or that model is missing, the gate rejects with `presidio_unavailable` instead of sending data. Keep `PRIVACY_LOCAL_ONLY=true`; setting it to `false` also requires `EXTERNAL_LLM_ENABLED=true`, and no real provider adapter is implemented in this stage.
+
 ## Tests and static checks
 
 ```powershell
@@ -127,7 +147,7 @@ python -m mypy app
 
 Tests use only synthetic values and temporary directories. Paid provider keys and live external calls are not required.
 
-Integration tests start a temporary embedded PostgreSQL 16 with pgvector through the `pgserver` development dependency, run the real Alembic migrations against it, and load the real `all-MiniLM-L6-v2` model. The first integration run needs network access to download the model; later runs work from the local cache. If `pgserver` or the model is unavailable the tests report an error rather than passing, so a skipped Stage 4 check is not evidence of success.
+Unit and security tests load real Presidio and `en_core_web_sm`; install the model with `python -m spacy download en_core_web_sm`. Integration tests start a temporary embedded PostgreSQL 16 with pgvector through the `pgserver` development dependency, run the real Alembic migrations against it (including `privacy_approvals`), and load the real `all-MiniLM-L6-v2` model. The first integration run needs network access to download the models; later runs work from the local cache. If `pgserver`, Presidio, or a model is unavailable the tests report an error rather than passing, so a skipped privacy or Stage 4 check is not evidence of success.
 
 ## Configuration
 

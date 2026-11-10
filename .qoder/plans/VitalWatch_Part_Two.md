@@ -154,14 +154,14 @@ After each stage, run its focused tests and then the complete current suite with
 - **Tests:** relevance/no-result behavior, filters/deduplication, cross-patient attempts, future-note exclusion, exact decimals/signs/units/dates, missing and conflicting labs, provenance resolution, and malformed schema rejection. ✅
 - **Gate:** synthetic retrieval-to-evidence integration passes with real local embeddings/pgvector and no external LLM. ✅
 
-### Stage 6 — Presidio privacy pipeline and mandatory gate
-- [ ] Configure Microsoft Presidio plus custom recognizers for names, contacts, addresses, government/medical/internal IDs, DOB, and identifying facilities.
-- [ ] Implement question-specific field allow-listing, redaction/tokenization, safe temporal generalization, irrelevant-content exclusion, and quasi-identifier review flags.
-- [ ] Implement `approved`, `rejected`, and `needs_review`; verify provenance/validation and fail closed on every service/error path.
-- [ ] Bind approvals to exact serialized payload digests and individual destinations; store minimal privacy audit records in PostgreSQL without raw values.
-- [ ] Add local-only mode and a dispatch guard that makes unapproved external transmission impossible through the application interface.
-- **Tests:** varied/malformed identifiers, PII in text and metadata, internal IDs, date handling, rare combinations, prompt-injection text, Presidio unavailable, gate exceptions, payload mutation, wrong destination, fallback without re-approval, secret-free logs, and zero spy-provider calls in every blocked/local-only case.
-- **Gate:** privacy/security tests pass before any live provider adapter is connected.
+### Stage 6 — Presidio privacy pipeline and mandatory gate ✅
+- [x] Configure Microsoft Presidio plus custom recognizers for names, contacts, addresses, government/medical/internal IDs, DOB, and identifying facilities.
+- [x] Implement question-specific field allow-listing, redaction/tokenization, safe temporal generalization, irrelevant-content exclusion, and quasi-identifier review flags.
+- [x] Implement `approved`, `rejected`, and `needs_review`; verify provenance/validation and fail closed on every service/error path.
+- [x] Bind approvals to exact serialized payload digests and individual destinations; store minimal privacy audit records in PostgreSQL without raw values.
+- [x] Add local-only mode and a dispatch guard that makes unapproved external transmission impossible through the application interface.
+- **Tests:** varied/malformed identifiers, PII in text and metadata, internal IDs, date handling, rare combinations, prompt-injection text, Presidio unavailable, gate exceptions, payload mutation, wrong destination, fallback without re-approval, secret-free logs, and zero spy-provider calls in every blocked/local-only case. ✅
+- **Gate:** privacy/security tests pass before any live provider adapter is connected. ✅
 
 ### Stage 7 — Providers, prompts, and routing
 - [ ] Define normalized LLM request/response and prepared-payload interfaces plus versioned explanation/reasoning prompts.

@@ -13,6 +13,7 @@ dependencies = [
     "fastapi>=0.115.0",
     "huggingface-hub>=0.20",
     "pgvector>=0.3.0",
+    "presidio-analyzer>=2.2.355,<3.0",
     "psycopg[binary]>=3.2.0",
     "pydantic>=2.10.0",
     "pydantic-settings>=2.7.0",
@@ -66,6 +67,9 @@ plugins = ["pydantic.mypy"]
 module = [
     "fitz",
     "pytesseract",
+    "presidio_analyzer",
+    "presidio_analyzer.nlp_engine",
+    "spacy",
     "numpy",
     "huggingface_hub",
     "sentence_transformers",

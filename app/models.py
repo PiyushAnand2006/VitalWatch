@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -50,6 +50,40 @@ class DocumentModel(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
+    )
+
+
+class PrivacyApprovalModel(Base):
+    """Minimal privacy decision metadata with no raw payload or PII values."""
+
+    __tablename__ = "privacy_approvals"
+    __table_args__ = (
+        Index("ix_privacy_approvals_status_created", "status", "created_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    request_id: Mapped[str] = mapped_column(String(128), index=True)
+    status: Mapped[str] = mapped_column(String(16), index=True)
+    purpose: Mapped[str] = mapped_column(String(32))
+    provider: Mapped[str] = mapped_column(String(64))
+    model_name: Mapped[str] = mapped_column("model", String(128))
+    destination_digest: Mapped[str] = mapped_column(String(64))
+    payload_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    patient_ref: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    actor_ref: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    question_type: Mapped[str] = mapped_column(String(32))
+    observation_count: Mapped[int]
+    reason_codes: Mapped[list[str]] = mapped_column(JSON, default=list)
+    review_flags: Mapped[list[str]] = mapped_column(JSON, default=list)
+    entity_counts: Mapped[dict[str, int]] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    consumed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
 

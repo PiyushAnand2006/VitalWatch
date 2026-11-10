@@ -12,8 +12,12 @@ from app.core.database import get_database_manager
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.request_context import RequestIDMiddleware
+from app.privacy.dispatch import ApprovedDispatcher
+from app.privacy.engine import PresidioPiiAnalyzer
+from app.privacy.gate import PrivacyGate
 from app.repositories.documents import DocumentRepository, PatientGrantRepository
 from app.repositories.embeddings import ChunkEmbeddingRepository
+from app.repositories.privacy import PrivacyApprovalRepository
 from app.services.document_processing import DocumentProcessor
 from app.services.document_storage import LocalDocumentStorage
 from app.services.embeddings import LocalEmbeddingService
@@ -79,6 +83,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         max_query_chars=resolved_settings.retrieval_max_query_chars,
     )
     app.state.evidence_compiler = EvidenceCompiler()
+    app.state.privacy_approvals = PrivacyApprovalRepository(database.sessionmaker)
+    app.state.privacy_gate = PrivacyGate(
+        analyzer=PresidioPiiAnalyzer(
+            model_name=resolved_settings.privacy_nlp_model,
+            score_threshold=resolved_settings.privacy_analyzer_score_threshold,
+        ),
+        approvals=app.state.privacy_approvals,
+        local_only=resolved_settings.privacy_local_only,
+        max_question_chars=resolved_settings.privacy_max_question_chars,
+        approval_ttl_seconds=resolved_settings.privacy_approval_ttl_seconds,
+    )
+    app.state.privacy_dispatcher = ApprovedDispatcher(
+        approvals=app.state.privacy_approvals,
+        local_only=resolved_settings.privacy_local_only,
+    )
     app.state.document_processor = DocumentProcessor(
         app.state.document_repository,
         app.state.document_storage,
