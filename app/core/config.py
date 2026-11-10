@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/vitalwatch"
     document_storage_directory: Path = Path("./data/documents")
     document_storage_encryption_key: SecretStr | None = None
+    upload_max_mb: int = Field(default=20, ge=1, le=100)
+    upload_max_pages: int = Field(default=200, ge=1, le=1000)
 
     privacy_gate_enabled: bool = True
     external_llm_enabled: bool = False

@@ -8,9 +8,12 @@ from fastapi import FastAPI
 from app.api.v1.router import api_v1_router
 from app.core.audit import AuditService, LoggingAuditSink
 from app.core.config import Settings, get_settings
+from app.core.database import get_database_manager
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.request_context import RequestIDMiddleware
+from app.repositories.documents import DocumentRepository, PatientGrantRepository
+from app.services.document_storage import LocalDocumentStorage
 
 
 @asynccontextmanager
@@ -19,7 +22,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     settings: Settings = app.state.settings
     settings.document_storage_directory.mkdir(parents=True, exist_ok=True)
-    yield
+    try:
+        yield
+    finally:
+        await app.state.database.close()
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -41,6 +47,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = resolved_settings
     app.state.audit_service = AuditService(LoggingAuditSink())
+    database = get_database_manager(resolved_settings)
+    app.state.database = database
+    app.state.patient_grants = PatientGrantRepository(database.sessionmaker)
+    app.state.document_repository = DocumentRepository(database.sessionmaker)
+    app.state.document_storage = LocalDocumentStorage(resolved_settings.document_storage_directory)
 
     app.add_middleware(RequestIDMiddleware)
     register_exception_handlers(app)

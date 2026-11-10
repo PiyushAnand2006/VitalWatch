@@ -13,7 +13,7 @@ _REDACTIONS = (
         re.compile(
             r"(?i)\b(authorization|api[_-]?key|access[_-]?token|auth[_-]?token|"
             r"secret[_-]?key|password)\b(\s*[:=]\s*)"
-                        r"(\"[^\"]*\"|'[^']*'|Bearer\s+[^\s,;]+|[^\s,;]+)"
+            r"(\"[^\"]*\"|'[^']*'|Bearer\s+[^\s,;]+|[^\s,;]+)"
         ),
         r"\1\2[REDACTED]",
     ),
@@ -70,8 +70,7 @@ def configure_logging(settings: Settings) -> None:
             "safe": {
                 "()": "app.core.logging.RedactingFormatter",
                 "format": (
-                    "%(asctime)s %(levelname)s %(name)s "
-                    "request_id=%(request_id)s %(message)s"
+                    "%(asctime)s %(levelname)s %(name)s request_id=%(request_id)s %(message)s"
                 ),
             },
         },

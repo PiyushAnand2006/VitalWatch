@@ -43,6 +43,12 @@ class DatabaseSessionManager:
     def engine(self) -> AsyncEngine:
         return self._engine
 
+    @property
+    def sessionmaker(self) -> async_sessionmaker[AsyncSession]:
+        """Expose the factory to repositories, not individual shared sessions."""
+
+        return self._sessionmaker
+
     async def close(self) -> None:
         await self._engine.dispose()
 
@@ -63,4 +69,3 @@ def get_database_manager(settings: Settings) -> DatabaseSessionManager:
         database_url=settings.database_url,
         echo=settings.debug,
     )
-

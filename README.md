@@ -4,16 +4,18 @@ Privacy-first document RAG and verified-explanation backend. This repository is 
 
 ## Current implementation status
 
-Only **Stage 1 — Foundation** is present:
+**Stage 2 — authorization and secure document lifecycle** is implemented on top of the foundation:
 
 - typed environment configuration with secure defaults;
 - FastAPI application factory and private runtime-directory initialization;
 - request ID propagation, safe public errors, and redacted logging;
 - a minimal structured audit interface with a logging sink;
 - liveness and readiness endpoints;
-- Stage 1 automated tests.
+- Bearer JWT authentication plus server-side PostgreSQL patient grants;
+- private original storage with generated filenames, checksums, duplicate detection and lifecycle metadata;
+- authorized document upload/list/status/reprocess/delete API routes.
 
-Document upload, authentication, patient authorization, extraction/OCR, embeddings, pgvector retrieval, evidence compilation, Presidio, external providers, LangGraph, and prediction contracts are not implemented yet. No SLM or Part 1 temporal prediction code is used.
+Extraction/OCR, embeddings, pgvector retrieval, evidence compilation, Presidio, external providers, LangGraph, and prediction contracts are not implemented yet. No SLM or Part 1 temporal prediction code is used.
 
 ## Requirements
 
@@ -44,12 +46,16 @@ python -m uvicorn app.main:app --reload
 
 With documentation enabled, Swagger UI is available at `http://127.0.0.1:8000/docs`.
 
-Stage 1 endpoints:
+Available endpoints:
 
 | Method | Path | Behavior |
 | --- | --- | --- |
 | GET | `/api/v1/health` | Returns liveness and the request ID. |
 | GET | `/api/v1/ready` | Checks validated configuration and private document storage directory; returns HTTP 503 if directory is unavailable. |
+| POST | `/api/v1/patients/{patient_id}/documents` | Upload an authorized PDF, TXT, PNG/JPEG, or DOCX document. |
+| GET | `/api/v1/patients/{patient_id}/documents` | List authorized document metadata with pagination. |
+| GET/DELETE | `/api/v1/patients/{patient_id}/documents/{document_id}` | Read status/metadata or delete an authorized document. |
+| POST | `/api/v1/patients/{patient_id}/documents/{document_id}/reprocess` | Return an authorized document to `uploaded` status. |
 
 Readiness currently checks only dependencies that exist in Stage 1. It does not claim that a database, embedding model, vector store, OCR engine, privacy service, or external provider is operational.
 

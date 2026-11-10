@@ -23,12 +23,18 @@ def test_database_manager_engine_initialization() -> None:
     )
     db_manager = get_database_manager(settings)
     assert db_manager.engine is not None
-    assert str(db_manager.engine.url).startswith("postgresql+psycopg://user:***@localhost:5432/vitalwatch_db")
+    assert str(db_manager.engine.url).startswith(
+        "postgresql+psycopg://user:***@localhost:5432/vitalwatch_db"
+    )
 
 
 def test_database_manager_converts_standard_postgresql_scheme() -> None:
-    db_manager = DatabaseSessionManager(database_url="postgresql://user:pass@localhost:5432/vitalwatch_db")
-    assert str(db_manager.engine.url).startswith("postgresql+psycopg://user:***@localhost:5432/vitalwatch_db")
+    db_manager = DatabaseSessionManager(
+        database_url="postgresql://user:pass@localhost:5432/vitalwatch_db"
+    )
+    assert str(db_manager.engine.url).startswith(
+        "postgresql+psycopg://user:***@localhost:5432/vitalwatch_db"
+    )
 
 
 def test_declarative_base_is_available() -> None:

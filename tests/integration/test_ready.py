@@ -35,9 +35,7 @@ def test_ready_returns_safe_503_when_storage_is_unavailable(
     assert response.status_code == 503
     body = response.json()
     assert body["status"] == "not_ready"
-    document_check = next(
-        check for check in body["checks"] if check["name"] == "document_storage"
-    )
+    document_check = next(check for check in body["checks"] if check["name"] == "document_storage")
     assert document_check["status"] == "failed"
     assert str(settings.document_storage_directory) not in response.text
     assert "X-Request-ID" in response.headers

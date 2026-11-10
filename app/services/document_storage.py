@@ -36,9 +36,15 @@ class LocalDocumentStorage(DocumentStorage):
         self.root_dir.mkdir(parents=True, exist_ok=True)
 
     def _resolve_path(self, key: str) -> Path:
-        # Prevent path traversal
-        clean_key = Path(key).name
-        return self.root_dir / clean_key
+        """Resolve a generated basename while rejecting traversal and nested paths."""
+
+        candidate = Path(key)
+        if candidate.name != key or key in {"", ".", ".."}:
+            raise ValueError("Invalid document storage key")
+        path = (self.root_dir / candidate).resolve()
+        if self.root_dir.resolve() not in path.parents:
+            raise ValueError("Invalid document storage key")
+        return path
 
     def store(self, key: str, data: bytes) -> str:
         path = self._resolve_path(key)
