@@ -21,13 +21,14 @@ Desktop.ini
 *.sqlite3
 *.dump
 
-# docs 
-docs_pdf/
-ppt/
-architecture_png/
+# docs — tracked so reference material is available on the new system
+# (not ignored — docs_pdf/, ppt/, architecture_png/ are all pushed)
 
-# fine tuned model
-finetune/
+# fine tuned model — track top-level source files; exclude agent/data subdirs inside
+# finetune/ itself is NOT ignored so its .md/.py files are pushed
+finetune/.mimosa/
+finetune/data/
+finetune/third_party/
 
 # Local configuration and secrets
 .env
@@ -36,7 +37,7 @@ finetune/
 *.pem
 *.key
 
-# Python environments and caches
+# Python environments and caches — keep ignored (not needed on new system)
 .venv/
 venv/
 __pycache__/
@@ -46,7 +47,7 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
-# Test and build artifacts
+# Test and build artifacts — keep ignored (generated on the new system)
 .coverage
 htmlcov/
 coverage.xml

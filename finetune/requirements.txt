@@ -1,0 +1,30 @@
+# VitalWatch internal SLM fine-tuning - Python dependencies
+# Kaggle preinstalls torch + CUDA; for local use install torch matching your platform first.
+# Versions are minimums verified against the Kaggle image (Python 3.10/3.11, CUDA 12.x).
+
+torch>=2.1
+transformers>=4.46.0
+datasets>=2.20.0
+accelerate>=0.34.0
+peft>=0.13.0
+trl>=0.12.0
+bitsandbytes>=0.44.0
+evaluate>=0.4.2
+pandas>=2.0
+scikit-learn>=1.3
+regex>=2024.4.16
+matplotlib>=3.7
+requests>=2.31   # vitalwatch_slm_client.py -> local SLM HTTP endpoint
+
+# Optional: in-process GGUF predictor (vitalwatch_predictor.py). On Windows, pip
+# may build from source - that needs CMake + "Desktop development with C++"
+# Visual Studio Build Tools. Prebuilt wheels are on the llama-cpp-python GitHub
+# releases page if the build fails. Full setup + integration guide:
+#   → gguf_local_setup.md (same folder)
+# llama-cpp-python>=0.3.0
+
+# Optional: stronger PII detection for the privacy validator (model-based, heavier).
+# If installed, the validator can be extended with it; the regex gate works without it.
+# presidio-analyzer>=2.2.35
+# spacy>=3.7
+# en_core_web_lg  (install via: python -m spacy download en_core_web_lg)
